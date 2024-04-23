@@ -1,0 +1,6 @@
+digraph G {
+node [shape=plaintext]
+nodo [label=<<table border='1' cellspacing='0'>
+<tr>   <td>Tipo</td>  <td>Descripcion</td> <td>Ammbito</td>  <td>Línea</td>  <td>Columna</td>  </tr>
+</table>>]
+}
