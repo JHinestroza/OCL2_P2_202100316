@@ -15,6 +15,7 @@ from expressions.ternario import Ternario
 from expressions.call import Call
 from expressions.return_statement import Return
 from expressions.interface_access import InterfaceAccess
+from expressions.Embebidas import Embebida
 
 # Instructions imports
 from instructions.print import Print
@@ -48,7 +49,22 @@ reserved_words = {
     'return' : 'RETURN',
     'function' : 'FUNC',
     'interface' : 'INTERFACE',
-    'else': 'ELSE'
+    'else': 'ELSE',
+    
+    'tolowercase': 'LCASE',
+    'touppercase': 'UPCASE',
+    'length' : 'LENGHT',
+    'push' : 'PUSH',
+    'indexof':'INDEXOF',
+    'join' : 'JOIN',
+    'pop' : 'POP',
+    'parseInt': 'PARSEINT',
+    'parsefloat': 'PARSEFLOAT',
+    'tostring': 'TOSTRING',
+    'typeof': 'TYPEOF',
+    'switch': 'SWITCH',
+    'case': 'CASE',
+    'default': 'DEFAULT',
 }
 
 # Listado de tokens
@@ -59,6 +75,7 @@ tokens = [
     'MENOS',
     'POR',
     'DIVIDIDO',
+    'MOD',
     'PUNTO',
     'DOSPTS',
     'COMA',
@@ -94,6 +111,8 @@ t_MAS           = r'\+'
 t_MENOS         = r'-'
 t_POR           = r'\*'
 t_DIVIDIDO      = r'/'
+t_MOD      =  r'\%'
+
 t_PUNTO         = r'\.'
 t_DOSPTS        = r':'
 t_COMA          = r','
@@ -114,7 +133,6 @@ t_TERN          = r'\?'
 def t_CADENA(t):
     r'\"(.+?)\"'
     try:
-        
         strValue = str(t.value)
         line = t.lexer.lexdata.rfind('\n', 0, t.lexpos) + 1
         column = t.lexpos - line
@@ -122,18 +140,6 @@ def t_CADENA(t):
         print(t.value.type)
     except ValueError:
         print("Error al convertir string %d", t.value)
-        t.value = Primitive(0, 0, None, ExpressionType.NULL)
-    return t
-
-def t_ENTERO(t):
-    r'\d+'
-    try:
-        intValue = int(t.value)
-        line = t.lexer.lexdata.rfind('\n', 0, t.lexpos) + 1
-        column = t.lexpos - line
-        t.value = Primitive(line, column, intValue, ExpressionType.INTEGER)
-    except ValueError:
-        print("Error al convertir a entero %d", t.value)
         t.value = Primitive(0, 0, None, ExpressionType.NULL)
     return t
 
@@ -148,6 +154,40 @@ def t_DECIMAL(t):
         print("Error al convertir a decimal %d", t.value)
         t.value = Primitive(0, 0, None, ExpressionType.NULL)
     return t
+
+
+def t_BOOLEANO(t):
+    r'true | false'
+    print(t.value)
+    try:
+        boolValue = True 
+        if t.value == 'true':
+            boolValue = True 
+        else:
+            boolValue = False
+        line = t.lexer.lexdata.rfind('\n', 0, t.lexpos) + 1
+        column = t.lexpos - line
+        # print("esto es un booleano",t.value, " en linea ",t)
+        t.value = Primitive(line, column, boolValue, ExpressionType.BOOLEAN)
+    except ValueError:
+        print("Error al convertir a boleano %d", t.value)
+        t.value = Primitive(0, 0, None, ExpressionType.NULL)
+    return t
+
+
+
+def t_ENTERO(t):
+    r'\d+'
+    try:
+        intValue = int(t.value)
+        line = t.lexer.lexdata.rfind('\n', 0, t.lexpos) + 1
+        column = t.lexpos - line
+        t.value = Primitive(line, column, intValue, ExpressionType.INTEGER)
+    except ValueError:
+        print("Error al convertir a entero %d", t.value)
+        t.value = Primitive(0, 0, None, ExpressionType.NULL)
+    return t
+
 
 def t_ID(t):
     r'[a-zA-Z_][a-zA-Z_0-9]*'
@@ -173,11 +213,11 @@ def t_error(t):
 
 #SINTACTICO
 precedence = (
-    ('left', 'OR'),
     ('left', 'AND'),
     ('left', 'MENOR', 'MAYOR'),
     ('left', 'MENORIG', 'MAYORIG'),
     ('left', 'MAS', 'MENOS'),
+    ('right','UMENOS'),
     ('left', 'POR', 'DIVIDIDO')
 )
 
@@ -370,45 +410,35 @@ def p_expression_list(t):
     t[0] = arr
 
 # expressiones aritmeticas, relacionales y lógicas
-def p_expression_add(t):
-    'expression : expression MAS expression'
+def p_expression_binaria(t):
+    '''expression : expression MAS expression
+                  | expression MENOS expression
+                  | expression POR expression
+                  | expression DIVIDIDO expression
+                  | expression MOD expression     '''
     params = get_params(t)
-    t[0] = Operation(params.line, params.column, "+", t[1], t[3])
+    if t[2] == '+'  : t[0] = Operation(params.line, params.column, "+", t[1], t[3])
+    elif t[2] == '-': t[0] = Operation(params.line, params.column, "-", t[1], t[3])
+    elif t[2] == '*': t[0] = Operation(params.line, params.column, "*", t[1], t[3])
+    elif t[2] == '/': t[0] = Operation(params.line, params.column, "/", t[1], t[3])
+    elif t[2] == '%': t[0] = Operation(params.line, params.column, "%", t[1], t[3])
+    
+def p_expresion_unaria(t):
+    'expression : MENOS expression %prec UMENOS'
+    params = get_params(t)
+    t[0] = Operation(params.line, params.column, "-", Primitive(params.line, params.column, 0, t[2].type), t[2])
 
-def p_expression_sub(t):
-    'expression : expression MENOS expression'
-    params = get_params(t)
-    t[0] = Operation(params.line, params.column, "-", t[1], t[3])
 
-def p_expression_mult(t):
-    'expression : expression POR expression'
+def p_expression_Relacionales(t):
+    '''expression : expression MENOR expression
+                  | expression MAYOR expression
+                  | expression MENORIG expression
+                  | expression MAYORIG expression'''
     params = get_params(t)
-    t[0] = Operation(params.line, params.column, "*", t[1], t[3])
-
-def p_expression_div(t):
-    'expression : expression DIVIDIDO expression'
-    params = get_params(t)
-    t[0] = Operation(params.line, params.column, "/", t[1], t[3])
-
-def p_expression_mayor(t):
-    'expression : expression MAYOR expression'
-    params = get_params(t)
-    t[0] = Operation(params.line, params.column, ">", t[1], t[3])
-
-def p_expression_menor(t):
-    'expression : expression MENOR expression'
-    params = get_params(t)
-    t[0] = Operation(params.line, params.column, "<", t[1], t[3])
-
-def p_expression_mayor_igual(t):
-    'expression : expression MAYORIG expression'
-    params = get_params(t)
-    t[0] = Operation(params.line, params.column, ">=", t[1], t[3])
-
-def p_expression_menor_igual(t):
-    'expression : expression MENORIG expression'
-    params = get_params(t)
-    t[0] = Operation(params.line, params.column, "<=", t[1], t[3])
+    if t[2] == '<'  :  t[0] = Operation(params.line, params.column, "<", t[1], t[3])
+    elif t[2] == '>':  t[0] = Operation(params.line, params.column, ">", t[1], t[3])
+    elif t[2] == '<=': t[0] = Operation(params.line, params.column, "<=", t[1], t[3])
+    elif t[2] == '>=': t[0] = Operation(params.line, params.column, ">=", t[1], t[3])
 
 def p_expression_igual(t):
     'expression : expression IGUALDAD expression'
@@ -427,6 +457,7 @@ def p_expression_and(t):
 
 def p_expression_or(t):
     'expression : expression OR expression'
+    print(t[3].opR.value)
     params = get_params(t)
     t[0] = Operation(params.line, params.column, "||", t[1], t[3])
 
@@ -439,6 +470,17 @@ def p_expression_agrupacion(t):
     'expression : PARIZQ expression PARDER'
     t[0] = t[2]
 
+
+def p_instruction_embebidas(t):
+    '''expression :    PARSEINT PARIZQ expression PARDER 
+                    | PARSEFLOAT PARIZQ expression PARDER '''
+                    
+    params = get_params(t)
+    print("EMBEBIDAAAAAAAA")
+    t[0] = Embebida(params.line, params.column,t[3],t[1])
+
+
+
 def p_expression_ternario(t):
     'expression : expression TERN expression DOSPTS expression'
     params = get_params(t)
@@ -447,6 +489,7 @@ def p_expression_ternario(t):
 def p_expression_primitiva(t):
     '''expression    : ENTERO
                     | CADENA
+                    | DECIMAL
                     | listArray'''
     t[0] = t[1]
 

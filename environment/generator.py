@@ -1,15 +1,13 @@
-lista = []
-
 class Generator:
     def __init__(self):
-        self.Temporal= 0x10000000
+        self.Temporal = 0x10000000
         self.Label = 0
         self.Code = []
         self.Data = []
         self.FinalCode = []
         self.Natives = []
         self.FuncCode = []
-        self.TempList = {}
+        self.TempList = []
         self.PrintStringFlag = True
         self.ConcatStringFlag = True
         self.BreakLabel = ""
@@ -23,13 +21,10 @@ class Generator:
         self.add_headers()
         self.add_footers()
         outstring = "".join(self.Code)
-        lista.clear()
-        print(self.TempList)
         return outstring
 
-    def get_temp(self,clave):
-        return self.TempList[clave]
-        
+    def get_temps(self):
+        return self.TempList
 
     def add_break(self, lvl):
         self.BreakLabel = lvl
@@ -43,15 +38,19 @@ class Generator:
     def add_continue(self, lvl):
         self.ContinueLabel = lvl
 
-    def new_temp(self,valor):
+    def new_temp(self):
         self.Temporal += 4
-        self.TempList[self.Temporal] = valor
         return self.Temporal
 
     def new_label(self):
         temp = self.Label
         self.Label += 1
-        return "L" + str(temp)
+        return "funcion" + str(temp) 
+    
+    def new_label_continuar(self):
+        temp = self.Label
+        self.Label += 1
+        return "continuarcodigo" + str(temp) 
 
     def add_br(self):
         self.Code.append("\n")
@@ -60,11 +59,7 @@ class Generator:
         self.Code.append(f"### {txt} \n")
 
     def variable_data(self, name, type, value):
-        if value in lista:
-            pass
-        else:
-            self.Data.append(f"{name}: .{type} {value} \n")
-            lista.append(value)
+        self.Data.append(f"{name}: .{type} {value} \n")
 
     def add_li(self, left, right):
         self.Code.append(f"\tli {left}, {right}\n")
@@ -80,6 +75,33 @@ class Generator:
 
     def add_slli(self, target, left, right):
         self.Code.append(f"\tslli {target}, {left}, {right}\n")
+
+    def add_blt(self, left, right, target):
+        self.Code.append(f"\tblt {left}, {right}, {target}\n")
+
+    def add_bgt(self, left, right, target):
+        self.Code.append(f"\tbgt {left}, {right}, {target}\n")
+
+    def add_bge(self, left, right, target):
+        self.Code.append(f"\tbge {left}, {right}, {target}\n")
+
+    def add_blez(self, left, right, target):
+        self.Code.append(f"\tblez {left}, {right}, {target}\n")
+
+    def add_beq(self, left, right, target):
+        self.Code.append(f"\tbeq {left}, {right}, {target}\n")
+
+    def add_bne(self, left, right, target):
+        self.Code.append(f"\tbne {target}, {left}, {right}\n")
+    
+    def add_or(self, left, right, target):
+        self.Code.append(f"\tor {left}, {right}, {target}\n")
+
+    def add_jump(self, lvl):
+        self.Code.append(f"\tj {lvl}\n")
+
+    def new_body_label(self, lvl):
+        self.Code.append(f"\t{lvl}:\n")
 
     def add_move(self, left, right):
         self.Code.append(f"\tmv {left}, {right}\n")
@@ -99,15 +121,11 @@ class Generator:
         self.Code.append('\n\tli a0, 0\n')
         self.Code.append('\tli a7, 93\n')
         self.Code.append('\tecall\n')
-        
-    
     def print_true(self):
         self.add_la('a0', "true_msg")
         self.add_li('a7', 4)
         self.add_system_call()
 
-
-    
     def print_false(self):
         self.add_la('a0', "false_msg")
         self.add_li('a7', 4)

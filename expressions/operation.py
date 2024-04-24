@@ -1,12 +1,10 @@
+
 from interfaces.expression import Expression
 from environment.types import ExpressionType
 from environment.symbol import Symbol
 from environment.value import Value
 
-contador = 0
-
 class Operation(Expression):
-    
     def __init__(self, line, col, operador, opL, opR):
         self.line = line
         self.col = col
@@ -15,9 +13,10 @@ class Operation(Expression):
         self.opR = opR
 
     def ejecutar(self, ast, env, gen):
-        global contador
+
         # Ejecución de operandos
         op1 = self.opL.ejecutar(ast, env, gen)
+        
         op2 = self.opR.ejecutar(ast, env, gen)
 
         gen.add_br()
@@ -34,21 +33,16 @@ class Operation(Expression):
             gen.add_li('t3', str(op2.value)) 
         #gen.add_li('t3', str(op2.value))
         gen.add_lw('t2', '0(t3)')
-        
+        temp = gen.new_temp()
 
         if self.operador == "+":
-            result = gen.get_temp(int(op1.value)) +  gen.get_temp(int(op2.value))
-            temp = gen.new_temp(result)
             gen.add_operation('add', 't0', 't1', 't2')
             gen.add_li('t3', str(temp))
             gen.add_sw('t0', '0(t3)')
-            
-            
+
             return  Value(str(temp), True, ExpressionType.INTEGER, [], [], [])
     
         if self.operador == "-":
-            result = gen.get_temp(int(op1.value)) -  gen.get_temp(int(op2.value))
-            temp = gen.new_temp(result)
             gen.add_operation('sub', 't0', 't1', 't2')
             gen.add_li('t3', str(temp))
             gen.add_sw('t0', '0(t3)')
@@ -56,8 +50,6 @@ class Operation(Expression):
             return  Value(str(temp), True, ExpressionType.INTEGER, [], [], [])
         
         if self.operador == "*":
-            result = gen.get_temp(int(op1.value)) *  gen.get_temp(int(op2.value))
-            temp = gen.new_temp(result)
             gen.add_operation('mul', 't0', 't1', 't2')
             gen.add_li('t3', str(temp))
             gen.add_sw('t0', '0(t3)')
@@ -65,8 +57,6 @@ class Operation(Expression):
             return  Value(str(temp), True, ExpressionType.INTEGER, [], [], [])
         
         if self.operador == "/":
-            result = gen.get_temp(int(op1.value)) /  gen.get_temp(int(op2.value))
-            temp = gen.new_temp(result)
             gen.add_operation('div', 't0', 't1', 't2')
             gen.add_li('t3', str(temp))
             gen.add_sw('t0', '0(t3)')
@@ -74,78 +64,92 @@ class Operation(Expression):
             return  Value(str(temp), True, ExpressionType.INTEGER, [], [], [])
         
         if self.operador == "<":
-            gen.comment('Realizando operacion menor que que')
-            gen.variable_data("true_msg", 'string', '\"true\"')
-            gen.variable_data("false_msg", 'string', '\"false\"')
-            result = gen.get_temp(int(op1.value)) <  gen.get_temp(int(op2.value))
-            contador +=1
-        
-            return  Value(str(temp), True, ExpressionType.BOOLEAN, [], [], [])
-        
+            # Generando etiquetas
+            trueLvl = gen.new_label()
+            falseLvl = gen.new_label()
+            # Agregando condición
+            gen.add_blt('t1', 't2', trueLvl)
+            # Agregando salto
+            gen.add_jump(falseLvl)
+            # Result
+            result = Value("", False, ExpressionType.BOOLEAN, [], [], [])
+            result.truelvl.append(trueLvl)
+            result.falselvl.append(falseLvl)
+            return result
+
         if self.operador == ">":
-            
-            gen.comment('Realizando operacion mayor que')
-            gen.variable_data("true_msg", 'string', '\"true\"')
-            gen.variable_data("false_msg", 'string', '\"false\"')
-            result = gen.get_temp(int(op1.value)) >  gen.get_temp(int(op2.value))
-            temp = gen.new_temp(result)
-            contador +=1
+            # Generando etiquetas
+            trueLvl = gen.new_label()
+            falseLvl = gen.new_label()
+            # Agregando condición
+            gen.add_bgt('t1', 't2', trueLvl)
+            # Agregando salto
+            gen.add_jump(falseLvl)
+            # Result
+            result = Value("", False, ExpressionType.BOOLEAN, [], [], [])
+            result.truelvl.append(trueLvl)
+            result.falselvl.append(falseLvl)
+            return result
         
-            return  Value(str(temp), True, ExpressionType.BOOLEAN, [], [], [])
+        
+        if self.operador == ">=":
+            # Generando etiquetas
+            trueLvl = gen.new_label()
+            falseLvl = gen.new_label()
+            # Agregando condición
+            gen.add_bge('t1', 't2', trueLvl)
+            # Agregando salto
+            gen.add_jump(falseLvl)
+            # Result
+            result = Value("", False, ExpressionType.BOOLEAN, [], [], [])
+            result.truelvl.append(trueLvl)
+            result.falselvl.append(falseLvl)
+            return result
+
+        if self.operador == "<=":
+            # Generando etiquetas
+            trueLvl = gen.new_label()
+            falseLvl = gen.new_label()
+            # Agregando condición
+            gen.add_beq('t1', 't2', trueLvl)
+            # Agregando salto
+            gen.add_jump(falseLvl)
+            # Result
+            result = Value("", False, ExpressionType.BOOLEAN, [], [], [])
+            result.truelvl.append(trueLvl)
+            result.falselvl.append(falseLvl)
+            menor = Operation(self.line,self.col,"<",self.opL,self.opR)
+            menor = menor.ejecutar(ast,env, gen)
+            return menor
         
         if self.operador == "==":
-            gen.comment('Realizando operacion igual')
-            gen.variable_data("true_msg", 'string', '\"true\"')
-            gen.variable_data("false_msg", 'string', '\"false\"')
-            result = gen.get_temp(int(op1.value)) ==  gen.get_temp(int(op2.value))
-            temp = gen.new_temp(result)
-            contador +=1
-        
-            return  Value(str(temp), True, ExpressionType.BOOLEAN, [], [], [])
+            # Generando etiquetas
+            trueLvl = gen.new_label()
+            falseLvl = gen.new_label()
+            # Agregando condición
+            gen.add_beq('t1', 't2', trueLvl)
+            # Agregando salto
+            gen.add_jump(falseLvl)
+            # Result
+            result = Value("", False, ExpressionType.BOOLEAN, [], [], [])
+            result.truelvl.append(trueLvl)
+            result.falselvl.append(falseLvl)
+            return result
         
         if self.operador == "!=":
-            gen.comment('Realizando operacion diferente')
-            gen.variable_data("true_msg", 'string', '\"true\"')
-            gen.variable_data("false_msg", 'string', '\"false\"')
-            result = gen.get_temp(int(op1.value)) !=  gen.get_temp(int(op2.value))
-            temp = gen.new_temp(result)
-            contador +=1
+            # Generando etiquetas
+            trueLvl = gen.new_label()
+            falseLvl = gen.new_label()
+            # Agregando condición
+            gen.add_bne('t1', 't2', trueLvl)
+            # Agregando salto
+            gen.add_jump(falseLvl)
+            # Result
+            result = Value("", False, ExpressionType.BOOLEAN, [], [], [])
+            result.truelvl.append(trueLvl)
+            result.falselvl.append(falseLvl)
+            return result
         
-            return  Value(str(temp), True, ExpressionType.BOOLEAN, [], [], [])
 
-        if self.operador == "||":
-            gen.comment('Realizando operacion mayor que')
-            gen.variable_data("true_msg", 'string', '\"true\"')
-            gen.variable_data("false_msg", 'string', '\"false\"')
-            result,result2 = self.Busqueda(gen, op1.value, op2.value)
-            op = result or result2
-            temp = gen.new_temp(op)
-            contador +=1
 
-            return  Value(str(temp), True, ExpressionType.BOOLEAN, [], [], [])
-        
-        if self.operador == "&&":
-            gen.comment('Realizando operacion mayor que')
-            gen.variable_data("true_msg", 'string', '\"true\"')
-            gen.variable_data("false_msg", 'string', '\"false\"')
-            result,result2 = self.Busqueda(gen, op1.value, op2.value)
-            op = result and result2
-            temp = gen.new_temp(op)
-            contador +=1
-
-            return  Value(str(temp), True, ExpressionType.BOOLEAN, [], [], [])
-        
         return None
-
-    def Busqueda(self, gen,val, val2):
-            result = val
-            result2 = val2
-            while True:
-                if result != True or result != False:
-                    result = gen.get_temp(int(val))
-                if result2 != True or result2 != False:
-                    result2 = gen.get_temp(int(val2))
-                if result is True or result is False and result2 is True or result2 is False:
-                    return result, result2    
-                val = result
-                val2 = result2

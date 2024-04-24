@@ -28,26 +28,31 @@ class Print(Instruction):
                     gen.add_la('a0', str(val.value))
                 gen.add_li('a7', '4')
                 gen.add_system_call()
+            elif (val.type == ExpressionType.FLOAT):
+                gen.add_br()
+                if 't' in str(val.value) and len(str(val.value)) < 2:
+                    gen.add_move('a0', str(val.value))
+                else:
+                    gen.add_la('a0', str(val.value))
+                gen.add_li('a7', '4')
+                gen.add_system_call()
             elif (val.type == ExpressionType.BOOLEAN):
-                result = self.Busqueda(gen, val.value)
-                if result == True:
-                    gen.print_true()
-                if result == False:
-                    gen.print_false()
-
-                    
+                salto = gen.new_label_continuar()
+                gen.variable_data("true_msg", 'string', '\"true\"')
+                gen.variable_data("false_msg", 'string', '\"false\"')
+                gen.add_code( f"{val.truelvl[-1]}:\n")
+                gen.print_true()
+                gen.add_jump(salto)
+                gen.add_code( f"{val.falselvl[-1]}:\n")
+                gen.print_false()
+                gen.add_jump(salto)
+                gen.add_code(salto +":")
                 
-        # Imprimiendo salto de linea
+                
+                
         gen.add_br()
         gen.add_li('a0', '10')
         gen.add_li('a7', '11')
         gen.add_system_call()
-        
+
         return None
-    
-    def Busqueda(self, gen,val):
-        while True:
-            result = gen.get_temp(int(val))
-            if result is True or result is False:
-                return result
-            val = result

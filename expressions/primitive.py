@@ -1,5 +1,4 @@
 from interfaces.expression import Expression
-from environment.symbol import Symbol
 from environment.types import ExpressionType
 from environment.value import Value
 
@@ -10,8 +9,9 @@ class Primitive(Expression):
         self.value = value
         self.type = type
 
-    def ejecutar(self, ast, env, gen):  
-        temp = gen.new_temp(self.value)
+    def ejecutar(self, ast, env, gen):
+        temp = gen.new_temp()
+        print(self.type)
         if(self.type == ExpressionType.INTEGER):
             gen.add_br()
             gen.comment('Agregando un primitivo numerico')
@@ -22,4 +22,9 @@ class Primitive(Expression):
         elif (self.type == ExpressionType.STRING):
             nameId = 'str_'+str(temp)
             gen.variable_data(nameId, 'string', '\"'+str(self.value)+'\"')
+            return  Value(nameId, False, self.type, [], [], [])
+        
+        elif (self.type == ExpressionType.FLOAT):
+            nameId = 'float_'+str(temp)
+            gen.variable_data(nameId, 'float', str(self.value))
             return  Value(nameId, False, self.type, [], [], [])

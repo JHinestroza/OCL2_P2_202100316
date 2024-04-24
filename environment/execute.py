@@ -12,13 +12,3 @@ def StatementExecuter(instructionList, ast, env, gen):
                 return res.value
             return res
     return None
-
-def LoopExecuter(instructionList, ast, env):
-    for inst in instructionList:
-        res = inst.ejecutar(ast, env)
-        if res != None:
-            if res.type == ExpressionType.BREAK:
-                return True
-            if res.type == ExpressionType.CONTINUE:
-                break
-    return False
