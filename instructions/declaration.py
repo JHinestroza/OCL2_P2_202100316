@@ -12,7 +12,7 @@ class Declaration(Instruction):
     def ejecutar(self, ast, env, gen):
         # Generar simbolo
         result = self.exp.ejecutar(ast, env, gen)
-        sym = Symbol(self.line, self.col, self.id, self.type, result.value)
+        sym = Symbol(self.line, self.col, self.id, self.type, result.value, result.valor)
         # Validar tipo
         if result.type != self.type:
             ast.setErrors("Los tipos de dato son incorrectos")

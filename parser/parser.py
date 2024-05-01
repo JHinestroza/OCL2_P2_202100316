@@ -16,6 +16,8 @@ from expressions.call import Call
 from expressions.return_statement import Return
 from expressions.interface_access import InterfaceAccess
 from expressions.Embebidas import Embebida
+from expressions.Operadores import Operadores
+from expressions.Parseo import Parseo
 
 # Instructions imports
 from instructions.print import Print
@@ -27,6 +29,16 @@ from instructions.while_instruction import While
 from instructions.function import Function
 from instructions.interface import Interface
 from instructions.interface_declaration import InterfaceDeclaration
+from instructions.Swtich import Switch
+from instructions.Cases import Cases
+from instructions.For import For
+
+from environment.ast import Ast
+from expressions.Errores import Errores, list_erroes
+
+
+ast = Ast()
+
 
 class codeParams:
     def __init__(self, line, column):
@@ -41,7 +53,7 @@ reserved_words = {
     'float': 'FLOAT',
     'number': 'NUMBER',
     'string': 'STRING',
-    'bool': 'BOOL',
+    'boolean': 'BOOL',
     'if' : 'IF',
     'while' : 'WHILE',
     'break' : 'BREAK',
@@ -59,12 +71,15 @@ reserved_words = {
     'join' : 'JOIN',
     'pop' : 'POP',
     'parseInt': 'PARSEINT',
-    'parsefloat': 'PARSEFLOAT',
-    'tostring': 'TOSTRING',
+    'parseFloat': 'PARSEFLOAT',
+    'toString': 'TOSTRING',
     'typeof': 'TYPEOF',
     'switch': 'SWITCH',
     'case': 'CASE',
     'default': 'DEFAULT',
+    'const': 'CONST',
+    'for': 'FOR',
+    
 }
 
 # Listado de tokens
@@ -77,12 +92,13 @@ tokens = [
     'DIVIDIDO',
     'MOD',
     'PUNTO',
-    'DOSPTS',
+    'DOSPUNTOS',
     'COMA',
     'PUNTOCOMA',
     'CADENA',
     'ENTERO',
     'DECIMAL',
+    'BOOLEANO',
     'IGUAL',
     'IGUALDAD',
     'DIF',
@@ -98,7 +114,11 @@ tokens = [
     'OR',
     'NOT',
     'TERN',
-    'ID'
+    'ID',
+    'true',
+    'false',
+    
+    
 ] + list(reserved_words.values())
 
 t_MAYOR         = r'>'
@@ -114,7 +134,7 @@ t_DIVIDIDO      = r'/'
 t_MOD      =  r'\%'
 
 t_PUNTO         = r'\.'
-t_DOSPTS        = r':'
+t_DOSPUNTOS        = r':'
 t_COMA          = r','
 t_PUNTOCOMA           = r';'
 t_IGUALDAD          = r'=='
@@ -129,19 +149,23 @@ t_OR            = r'\|\|'
 t_NOT           = r'!'
 t_TERN          = r'\?'
 
+t_false = r'false'
+t_true = r'true'
+
 #Función de reconocimiento
 def t_CADENA(t):
-    r'\"(.+?)\"'
+    r'"[^"]*"'
     try:
         strValue = str(t.value)
         line = t.lexer.lexdata.rfind('\n', 0, t.lexpos) + 1
         column = t.lexpos - line
         t.value = Primitive(line, column, strValue.replace('"', ''), ExpressionType.STRING)
-        print(t.value.type)
     except ValueError:
-        print("Error al convertir string %d", t.value)
+        error = Errores(line,column,"Sintactico",f"Error al convertir string %d, {t.value}")
+        ast.setErrors(error)
         t.value = Primitive(0, 0, None, ExpressionType.NULL)
     return t
+
 
 def t_DECIMAL(t):
     r'\d+\.\d+'
@@ -151,14 +175,14 @@ def t_DECIMAL(t):
         column = t.lexpos - line
         t.value = Primitive(line, column, floatValue, ExpressionType.FLOAT)
     except ValueError:
-        print("Error al convertir a decimal %d", t.value)
+        error = Errores(line,column,"Sintactico",f"Error al convertir a decimal %d, {t.value}")
+        ast.setErrors(error)
         t.value = Primitive(0, 0, None, ExpressionType.NULL)
     return t
 
 
 def t_BOOLEANO(t):
     r'true | false'
-    print(t.value)
     try:
         boolValue = True 
         if t.value == 'true':
@@ -166,11 +190,11 @@ def t_BOOLEANO(t):
         else:
             boolValue = False
         line = t.lexer.lexdata.rfind('\n', 0, t.lexpos) + 1
-        column = t.lexpos - line
-        # print("esto es un booleano",t.value, " en linea ",t)
+        column = t.lexpos - line    
         t.value = Primitive(line, column, boolValue, ExpressionType.BOOLEAN)
     except ValueError:
-        print("Error al convertir a boleano %d", t.value)
+        error = Errores(line,column,"Sintactico",f"Error al convertir a booleano %d, {t.value}")
+        ast.setErrors(error)
         t.value = Primitive(0, 0, None, ExpressionType.NULL)
     return t
 
@@ -208,17 +232,21 @@ def t_ignore_COMMENTBLOCK(t):
     t.lexer.lineno += t.value.count('\n')
 
 def t_error(t):
+    params = get_params(t)
+    error = Errores(params.line, params.column,"LEXICO", f"no se reconoce el valor {t.value[0]}")
+    ast.setErrors(f"LEXICO no se reconoce el valor {t.value[0]}")
+    list_erroes.append(error)
     print("Error Léxico '%s'" % t.value[0])
     t.lexer.skip(1)
 
 #SINTACTICO
 precedence = (
-    ('left', 'AND'),
     ('left', 'MENOR', 'MAYOR'),
     ('left', 'MENORIG', 'MAYORIG'),
+    ('left', 'MENORIG', 'MAYORIG','IGUALDAD'),
     ('left', 'MAS', 'MENOS'),
     ('right','UMENOS'),
-    ('left', 'POR', 'DIVIDIDO')
+    ('left', 'POR', 'DIVIDIDO','MOD')
 )
 
 #START
@@ -242,6 +270,7 @@ def p_instruction_list(t):
                 | whileinstruction 
                 | declaration
                 | arraydeclaration
+                | forinstruction
                 | assignment
                 | breakstmt
                 | continuestmt
@@ -249,6 +278,7 @@ def p_instruction_list(t):
                 | call
                 | returnstmt
                 | interfacecreation
+                | switch_statement
                 | interdeclaration'''
     t[0] = t[1]
 
@@ -268,31 +298,91 @@ def p_instruction_if_else(t):
         t[0] = If(params.line, params.column, t[3], t[6], t[10])
     else:
         t[0] = If(params.line, params.column, t[3], t[6], [t[9]])
+        
+
+def p_switch_statement(t):
+    '''switch_statement : SWITCH PARIZQ expression PARDER LLAVEIZQ cases_statement default_case LLAVEDER   
+                        | SWITCH PARIZQ expression PARDER LLAVEIZQ cases_statement LLAVEDER'''
+    print(len(t[6]))
+    params = get_params(t)
+    if len(t) == 9:
+        t[0] = Switch(params.line, params.column,t[3],t[6],t[7])
+    else:
+        t[0] = Switch(params.line, params.column,t[3],t[6],None)
+        
+def p_cases_statement(t):
+    '''cases_statement : cases_statement case_statement
+                       | case_statement'''
+    if 2 < len(t):
+        t[1].append(t[2])
+        t[0] = t[1]
+    else:
+        t[0] = [t[1]]
+
+def p_case_statement(t):
+    'case_statement : CASE expression DOSPUNTOS block '
+    params = get_params(t)
+    t[0] = Cases(params.line, params.column,t[2],t[4])
+
+def p_default_statement(t):
+    'default_case : DEFAULT DOSPUNTOS block'
+    params = get_params(t)
+    primitivo =  Primitive(params.line, params.column,"default", ExpressionType.STRING)
+    t[0] = Cases(params.line, params.column,primitivo,t[3])
 
 
 def p_instruction_while(t):
     'whileinstruction : WHILE PARIZQ expression PARDER LLAVEIZQ block LLAVEDER'
     params = get_params(t)
     t[0] = While(params.line, params.column, t[3], t[6])
+    
+def p_instruction_operadores(t):
+    '''operadores : ID MAS MAS  '''
+    params = get_params(t)
+    t[0] = Operadores(params.line, params.column,'+=',t[1], Primitive(params.line, params.column, 1, ExpressionType.INTEGER))
+    
+def p_instruction_FOR(t):
+    '''forinstruction : FOR PARIZQ declaration expression PUNTOCOMA operadores PARDER LLAVEIZQ block LLAVEDER  '''
+    params = get_params(t)
+    print("ENTRE AL FOR")
+    t[0] = For(params.line, params.column, t[3], t[4], t[9],t[6])
+
 
 def p_instruction_declaration(t):
-    'declaration : VAR ID DOSPTS type IGUAL expression PUNTOCOMA'
+    'declaration : VAR ID DOSPUNTOS type IGUAL expression PUNTOCOMA'
+    params = get_params(t)
+    if t[4] == None:
+        t[0] = Declaration(params.line, params.column, t[2],  t[6].type , t[6])
+        
+    else:
+        t[0] = Declaration(params.line, params.column, t[2], t[4], t[6])
+        
+        
+def p_instruction_assignment_decla(t):
+    'declaration : VAR ID IGUAL expression PUNTOCOMA'
+    params = get_params(t)
+    print(t[4])
+    t[0] = Declaration(params.line, params.column, t[2], t[4].type , t[4])
+
+def p_instruction_declaration2  (t):
+    'declaration : CONST ID DOSPUNTOS type IGUAL expression PUNTOCOMA'
     params = get_params(t)
     t[0] = Declaration(params.line, params.column, t[2], t[4], t[6])
 
+
 def p_instruction_array_declaration(t):
-    'arraydeclaration : VAR ID DOSPTS type CORIZQ CORDER IGUAL expression PUNTOCOMA'
+    'arraydeclaration : VAR ID DOSPUNTOS type CORIZQ CORDER IGUAL expression PUNTOCOMA'
     params = get_params(t)
     t[0] = ArrayDeclaration(params.line, params.column, t[2], t[4], t[8])
 
 def p_instruction_interface_declaration(t):
-    'interdeclaration : VAR ID DOSPTS ID IGUAL LLAVEIZQ interfaceContent LLAVEDER PUNTOCOMA'
+    'interdeclaration : VAR ID DOSPUNTOS ID IGUAL LLAVEIZQ interfaceContent LLAVEDER PUNTOCOMA'
     params = get_params(t)
     t[0] = InterfaceDeclaration(params.line, params.column, t[2], t[4], t[7])
 
 def p_instruction_interface_content(t):
-    '''interfaceContent : interfaceContent COMA ID DOSPTS expression
-                | ID DOSPTS expression'''
+    '''interfaceContent : interfaceContent COMA ID DOSPUNTOS expression
+                | ID DOSPUNTOS expression'''
     arr = []
     if len(t) > 5:
         param = {t[3] : t[5]}
@@ -344,8 +434,8 @@ def p_instruction_interface_creation(t):
     t[0] = Interface(params.line, params.column, t[2], t[4])
 
 def p_instruction_interface_attribute(t):
-    '''attributeList : attributeList ID DOSPTS type PUNTOCOMA
-                | ID DOSPTS type PUNTOCOMA'''
+    '''attributeList : attributeList ID DOSPUNTOS type PUNTOCOMA
+                | ID DOSPUNTOS type PUNTOCOMA'''
     arr = []
     if len(t) > 5:
         param = {t[2] : t[4]}
@@ -356,8 +446,8 @@ def p_instruction_interface_attribute(t):
     t[0] = arr
 
 def p_expression_param_list(t):
-    '''paramsList : paramsList COMA ID DOSPTS type
-                | ID DOSPTS type'''
+    '''paramsList : paramsList COMA ID DOSPUNTOS type
+                | ID DOSPUNTOS type'''
     arr = []
     if len(t) > 5:
         param = {t[3] : t[5]}
@@ -368,7 +458,7 @@ def p_expression_param_list(t):
     t[0] = arr
 
 def p_instruction_function_type(t):
-    '''functype : DOSPTS type
+    '''functype : DOSPUNTOS type
                 | '''
     if len(t) > 2:
         t[0] = t[2]
@@ -396,8 +486,9 @@ def p_type_prod(t):
         t[0] = ExpressionType.FLOAT
     if t[1] == 'string':
         t[0] = ExpressionType.STRING
-    if t[1] == 'bool':
+    if t[1] == 'boolean':
         t[0] = ExpressionType.BOOLEAN
+  
 
 def p_expression_list(t):
     '''expressionList : expressionList COMA expression
@@ -457,7 +548,6 @@ def p_expression_and(t):
 
 def p_expression_or(t):
     'expression : expression OR expression'
-    print(t[3].opR.value)
     params = get_params(t)
     t[0] = Operation(params.line, params.column, "||", t[1], t[3])
 
@@ -474,15 +564,31 @@ def p_expression_agrupacion(t):
 def p_instruction_embebidas(t):
     '''expression :    PARSEINT PARIZQ expression PARDER 
                     | PARSEFLOAT PARIZQ expression PARDER '''
-                    
+
     params = get_params(t)
-    print("EMBEBIDAAAAAAAA")
     t[0] = Embebida(params.line, params.column,t[3],t[1])
+    
+    
+def p_instruction_embebidas_string(t):
+    '''expression :    expression PUNTO TOSTRING PARIZQ PARDER '''          
+    params = get_params(t)
+    t[0] = Parseo(params.line, params.column,t[1], t[3])
 
+def p_instruction_embebidas_string2(t):
+    '''expression :    ID PUNTO TOSTRING PARIZQ PARDER '''          
+    params = get_params(t)
+    print("xd?")
+    acceso = Access(params.line, params.column, t[1])
+    t[0] = Parseo(params.line, params.column,acceso, t[3])
+                    
 
+def p_instruction_embebidas_typeof(t):
+    '''expression : TYPEOF expression '''          
+    params = get_params(t)
+    t[0] = Embebida(params.line, params.column, t[2] , t[1])
 
 def p_expression_ternario(t):
-    'expression : expression TERN expression DOSPTS expression'
+    'expression : expression TERN expression DOSPUNTOS expression'
     params = get_params(t)
     t[0] = Ternario(params.line, params.column, t[1], t[3], t[5])
 
@@ -490,6 +596,7 @@ def p_expression_primitiva(t):
     '''expression    : ENTERO
                     | CADENA
                     | DECIMAL
+                    | BOOLEANO
                     | listArray'''
     t[0] = t[1]
 
@@ -518,6 +625,10 @@ def p_expression_list_array(t):
 
 def p_error(p):
     if p:
+        params = get_params(p)
+        error = Errores(params.line, params.column,"LEXICO", f"no se reconoce el valor {p.value[0]}")
+        ast.setErrors(f"Error de sintaxis en línea {p.lineno}, columna {p.lexpos}: Token inesperado '{p.value}'")
+        list_erroes.append(error)
         print(f"Error de sintaxis en línea {p.lineno}, columna {p.lexpos}: Token inesperado '{p.value}'")
     else:
         print("Error de sintaxis")

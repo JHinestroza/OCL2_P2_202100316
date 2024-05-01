@@ -12,12 +12,14 @@ class Embebida(Instruction):
         
 
     def ejecutar(self, ast, env,gen):
+        
    
         if self.parseo == "parseInt":
             parseo = float(self.exp.value)
+            print(parseo)
             result = Primitive(self.line, self.col, int(parseo), ExpressionType.INTEGER)
-            valor = result.ejecutar(ast, env, gen)
-            return valor
+            result = result.ejecutar(ast,env,gen)
+            return result
 
 
         if self.parseo == "parseFloat":
@@ -27,15 +29,26 @@ class Embebida(Instruction):
             return valor
         
         if self.parseo == "typeof":
-            
+            result = self.exp.ejecutar(ast,env,gen)
+            temp = gen.new_temp()
             if result.type== ExpressionType.STRING:
-                result = Value(line=self.line, col=self.col, result="string", type=ExpressionType.STRING)
+                valor = Primitive(self.line, self.col, "string", ExpressionType.STRING)
+                result = valor.ejecutar(ast,env,gen)
+                return  result
             if result.type== ExpressionType.INTEGER:
-                result = Value(line=self.line, col=self.col, result="number", type=ExpressionType.STRING)
+                valor = Primitive(self.line, self.col, "integer", ExpressionType.STRING)
+                result = valor.ejecutar(ast,env,gen)
+                return  result
             if result.type== ExpressionType.FLOAT:
-                result = Value(line=self.line, col=self.col, result="float", type=ExpressionType.STRING)
+                valor = Primitive(self.line, self.col, "float", ExpressionType.STRING)
+                result = valor.ejecutar(ast,env,gen)
+                return  result
             if result.type== ExpressionType.BOOLEAN:
-                result = Value(line=self.line, col=self.col, result="boolean", type=ExpressionType.STRING)
+                valor = Primitive(self.line, self.col, "boolean",ExpressionType.STRING)
+                result = valor.ejecutar(ast,env,gen)
+                return  result
             if result.type== ExpressionType.ARRAY:
-                result = Value(line=self.line, col=self.col, result="array", type=ExpressionType.STRING)
+                valor = Primitive(self.line, self.col, "array", ExpressionType.STRING)
+                result = valor.ejecutar(ast,env,gen)
+                return  result
             return result

@@ -37,17 +37,26 @@ class Print(Instruction):
                 gen.add_li('a7', '4')
                 gen.add_system_call()
             elif (val.type == ExpressionType.BOOLEAN):
-                salto = gen.new_label_continuar()
-                gen.variable_data("true_msg", 'string', '\"true\"')
-                gen.variable_data("false_msg", 'string', '\"false\"')
-                gen.add_code( f"{val.truelvl[-1]}:\n")
-                gen.print_true()
-                gen.add_jump(salto)
-                gen.add_code( f"{val.falselvl[-1]}:\n")
-                gen.print_false()
-                gen.add_jump(salto)
-                gen.add_code(salto +":")
-                
+                print("soy val", val.value)
+                if not val.truelvl:
+                    gen.add_br()
+                    if 't' in str(val.value):
+                        gen.add_move('t3', str(val.value))
+                    else:
+                        gen.add_li('t3', str(val.value))
+                    gen.add_lw('a0', '0(t3)')
+                    gen.add_li('a7', '1')
+                    gen.add_system_call()
+                else:
+                    salto = gen.new_label_continuar()
+                    gen.add_code( f"{val.truelvl[-1]}:\n")
+                    gen.print_true()
+                    gen.add_jump(salto)
+                    gen.add_code( f"{val.falselvl[-1]}:\n")
+                    gen.print_false()
+                    gen.add_jump(salto)
+                    gen.add_code(salto +":")
+                    
                 
                 
         gen.add_br()

@@ -85,18 +85,21 @@ class Generator:
     def add_bge(self, left, right, target):
         self.Code.append(f"\tbge {left}, {right}, {target}\n")
 
-    def add_blez(self, left, right, target):
-        self.Code.append(f"\tblez {left}, {right}, {target}\n")
+    def add_blez(self, left, target):
+        self.Code.append(f"\tblez {left},{target}\n")
 
     def add_beq(self, left, right, target):
         self.Code.append(f"\tbeq {left}, {right}, {target}\n")
 
+    def add_or(self, left, right, target):
+        self.Code.append(f"\tor {target}, {left}, {right}\n")
+        
     def add_bne(self, left, right, target):
-        self.Code.append(f"\tbne {target}, {left}, {right}\n")
+        self.Code.append(f"\tbne {left}, {right}, {target}\n")
     
     def add_or(self, left, right, target):
         self.Code.append(f"\tor {left}, {right}, {target}\n")
-
+    
     def add_jump(self, lvl):
         self.Code.append(f"\tj {lvl}\n")
 
@@ -121,12 +124,14 @@ class Generator:
         self.Code.append('\n\tli a0, 0\n')
         self.Code.append('\tli a7, 93\n')
         self.Code.append('\tecall\n')
+        
+        
     def print_true(self):
-        self.add_la('a0', "true_msg")
-        self.add_li('a7', 4)
+        self.add_li('a0', "1")
+        self.add_li('a7', 1)
         self.add_system_call()
 
     def print_false(self):
-        self.add_la('a0', "false_msg")
-        self.add_li('a7', 4)
+        self.add_li('a0', "0")
+        self.add_li('a7', 1)
         self.add_system_call()

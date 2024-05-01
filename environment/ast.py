@@ -22,3 +22,6 @@ class Ast():
     
     def getErrors(self):
         return self.errors
+
+    def ClearErrors(self):
+        self.errors.clear()
