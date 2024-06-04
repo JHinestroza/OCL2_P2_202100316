@@ -38,6 +38,7 @@ from expressions.Errores import Errores, list_erroes
 
 
 ast = Ast()
+simbolos = []
 
 
 class codeParams:
@@ -63,8 +64,8 @@ reserved_words = {
     'interface' : 'INTERFACE',
     'else': 'ELSE',
     
-    'tolowercase': 'LCASE',
-    'touppercase': 'UPCASE',
+    'toLowerCase': 'LCASE',
+    'toUpperCase': 'UPCASE',
     'length' : 'LENGHT',
     'push' : 'PUSH',
     'indexof':'INDEXOF',
@@ -344,12 +345,14 @@ def p_instruction_operadores(t):
 def p_instruction_FOR(t):
     '''forinstruction : FOR PARIZQ declaration expression PUNTOCOMA operadores PARDER LLAVEIZQ block LLAVEDER  '''
     params = get_params(t)
+    
     print("ENTRE AL FOR")
     t[0] = For(params.line, params.column, t[3], t[4], t[9],t[6])
 
 
 def p_instruction_declaration(t):
     'declaration : VAR ID DOSPUNTOS type IGUAL expression PUNTOCOMA'
+    simbolos.append(t[2])
     params = get_params(t)
     if t[4] == None:
         t[0] = Declaration(params.line, params.column, t[2],  t[6].type , t[6])
@@ -366,17 +369,20 @@ def p_instruction_assignment_decla(t):
 
 def p_instruction_declaration2  (t):
     'declaration : CONST ID DOSPUNTOS type IGUAL expression PUNTOCOMA'
+    simbolos.append(t[2])
     params = get_params(t)
     t[0] = Declaration(params.line, params.column, t[2], t[4], t[6])
 
 
 def p_instruction_array_declaration(t):
     'arraydeclaration : VAR ID DOSPUNTOS type CORIZQ CORDER IGUAL expression PUNTOCOMA'
+    simbolos.append(t[2])
     params = get_params(t)
     t[0] = ArrayDeclaration(params.line, params.column, t[2], t[4], t[8])
 
 def p_instruction_interface_declaration(t):
     'interdeclaration : VAR ID DOSPUNTOS ID IGUAL LLAVEIZQ interfaceContent LLAVEDER PUNTOCOMA'
+    simbolos.append(t[2])
     params = get_params(t)
     t[0] = InterfaceDeclaration(params.line, params.column, t[2], t[4], t[7])
 
@@ -490,15 +496,7 @@ def p_type_prod(t):
         t[0] = ExpressionType.BOOLEAN
   
 
-def p_expression_list(t):
-    '''expressionList : expressionList COMA expression
-                    | expression '''
-    arr = []
-    if len(t) > 2:
-        arr = t[1] + [t[3]]
-    else:
-        arr.append(t[1])
-    t[0] = arr
+
 
 # expressiones aritmeticas, relacionales y lógicas
 def p_expression_binaria(t):
@@ -568,7 +566,6 @@ def p_instruction_embebidas(t):
     params = get_params(t)
     t[0] = Embebida(params.line, params.column,t[3],t[1])
     
-    
 def p_instruction_embebidas_string(t):
     '''expression :    expression PUNTO TOSTRING PARIZQ PARDER '''          
     params = get_params(t)
@@ -580,7 +577,14 @@ def p_instruction_embebidas_string2(t):
     print("xd?")
     acceso = Access(params.line, params.column, t[1])
     t[0] = Parseo(params.line, params.column,acceso, t[3])
-                    
+
+
+def p_parseup(t):
+    '''expression :  ID PUNTO UPCASE  PARIZQ   PARDER
+                 | ID PUNTO LCASE  PARIZQ   PARDER'''
+    params = get_params(t)
+    t[0] = Parseo(params.line, params.column,  Access(params.line, params.column, t[1]) , t[3])
+    
 
 def p_instruction_embebidas_typeof(t):
     '''expression : TYPEOF expression '''          
@@ -604,6 +608,17 @@ def p_expression_array_primitiva(t):
     '''expression : CORIZQ expressionList CORDER'''
     params = get_params(t)
     t[0] = Array(params.line, params.column, t[2])
+    
+    
+def p_expression_list(t):
+    '''expressionList : expressionList COMA expression
+                    | expression '''
+    arr = []
+    if len(t) > 2:
+        arr = t[1] + [t[3]]
+    else:
+        arr.append(t[1])
+    t[0] = arr
 
 def p_expression_call_function(t):
     '''expression : ID PARIZQ expressionList PARDER

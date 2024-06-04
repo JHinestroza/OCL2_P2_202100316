@@ -9,6 +9,6 @@ def StatementExecuter(instructionList, ast, env, gen):
         res = inst.ejecutar(ast, env, gen)
         if res != None:
             if res.type == ExpressionType.RETURN:
-                return res.value
+                return res.valor
             return res
     return None

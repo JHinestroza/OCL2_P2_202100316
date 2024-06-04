@@ -3,6 +3,7 @@ from interfaces.expression import Expression
 from environment.types import ExpressionType
 from environment.symbol import Symbol
 from environment.value import Value
+from expressions.Errores import Errores,list_erroes
 
 class Operation(Expression):
     def __init__(self, line, col, operador, opL, opR):
@@ -24,7 +25,7 @@ class Operation(Expression):
             result = int(op1.valor)+int(op2.valor)
 
             gen.add_br()
-            gen.comment('Realizando operacion suma')
+
             if 't' in str(op1.value):
                 gen.add_move('t3', str(op1.value))
             else:
@@ -44,14 +45,13 @@ class Operation(Expression):
             return  Value(str(temp), True, ExpressionType.INTEGER, [], [], [],result)
     
         if self.operador == "-":
-            # Ejecución de operandos
             op1 = self.opL.ejecutar(ast, env, gen)
             op2 = self.opR.ejecutar(ast, env, gen)
             
+            print("exd",op1.valor)
             result = int(op1.valor)-int(op2.valor)
 
             gen.add_br()
-            gen.comment('Realizando operacion resta')
             if 't' in str(op1.value):
                 gen.add_move('t3', str(op1.value))
             else:
@@ -80,7 +80,6 @@ class Operation(Expression):
             result = int(op1.valor)*int(op2.valor)
 
             gen.add_br()
-            gen.comment('Realizando operacion multiplicacion')
             if 't' in str(op1.value):
                 gen.add_move('t3', str(op1.value))
             else:
@@ -91,8 +90,7 @@ class Operation(Expression):
             else:
                 gen.add_li('t3', str(op2.value)) 
             gen.add_lw('t2', '0(t3)')
-            
-            # Traducción de multiplicación
+
             gen.add_operation('mul', 't0', 't1', 't2')
             gen.add_li('t3', str(temp))
             gen.add_sw('t0', '0(t3)')
@@ -100,7 +98,6 @@ class Operation(Expression):
             return  Value(str(temp), True, ExpressionType.INTEGER, [], [], [],result)
         
         if self.operador == "/":
-            # Ejecución de operandos
             op1 = self.opL.ejecutar(ast, env, gen)
             op2 = self.opR.ejecutar(ast, env, gen)
             
@@ -119,7 +116,6 @@ class Operation(Expression):
                 gen.add_li('t3', str(op2.value)) 
             gen.add_lw('t2', '0(t3)')
             
-            # Traducción de división
             gen.add_operation('div', 't0', 't1', 't2')
             gen.add_li('t3', str(temp))
             gen.add_sw('t0', '0(t3)')
@@ -127,7 +123,6 @@ class Operation(Expression):
             return  Value(str(temp), True, ExpressionType.INTEGER, [], [], [],result)
         
         if self.operador == "%":
-            # Ejecución de operandos
             op1 = self.opL.ejecutar(ast, env, gen)
             op2 = self.opR.ejecutar(ast, env, gen)
             result = int(op1.valor)%int(op2.valor)
@@ -162,7 +157,6 @@ class Operation(Expression):
             result = int(op1.valor)<int(op2.valor)
 
             gen.add_br()
-            gen.comment('Realizando operacion menor que')
             if 't' in str(op1.value):
                 gen.add_move('t3', str(op1.value))
             else:
@@ -201,7 +195,6 @@ class Operation(Expression):
             
 
             gen.add_br()
-            gen.comment('Realizando operacion mayor que')
             if 't' in str(op1.value):
                 gen.add_move('t3', str(op1.value))
             else:
@@ -212,16 +205,10 @@ class Operation(Expression):
             else:
                 gen.add_li('t3', str(op2.value)) 
             gen.add_lw('t2', '0(t3)')
-            
-            # Traducción de mayor qué
-            # Generando etiquetas
             trueLvl = gen.new_label()
             falseLvl = gen.new_label()
-            # Agregando condición
             gen.add_bgt('t1', 't2', trueLvl)
-            # Agregando salto
             gen.add_jump(falseLvl)
-            # Result
             result = Value("", False, ExpressionType.BOOLEAN, [], [], [],result)
             result.truelvl.append(trueLvl)
             result.falselvl.append(falseLvl)
@@ -229,14 +216,12 @@ class Operation(Expression):
         
         
         if self.operador == ">=":
-            # Ejecución de operandos
             op1 = self.opL.ejecutar(ast, env, gen)
             op2 = self.opR.ejecutar(ast, env, gen)
             
             result = int(op1.valor)>=int(op2.valor)
 
             gen.add_br()
-            gen.comment('Realizando operacion mayor o igual que')
             if 't' in str(op1.value):
                 gen.add_move('t3', str(op1.value))
             else:
@@ -247,23 +232,16 @@ class Operation(Expression):
             else:
                 gen.add_li('t3', str(op2.value)) 
             gen.add_lw('t2', '0(t3)')
-            
-            # Traducción de mayor o igual qué
-            # Generando etiquetas
             trueLvl = gen.new_label()
             falseLvl = gen.new_label()
-            # Agregando condición
             gen.add_bge('t1', 't2', trueLvl)
-            # Agregando salto
             gen.add_jump(falseLvl)
-            # Result
             result = Value("", False, ExpressionType.BOOLEAN, [], [], [],result)
             result.truelvl.append(trueLvl)
             result.falselvl.append(falseLvl)
             return result
 
         if self.operador == "<=":
-            # Ejecución de operandos
             op1 = self.opL.ejecutar(ast, env, gen)
             op2 = self.opR.ejecutar(ast, env, gen)
             
@@ -282,16 +260,11 @@ class Operation(Expression):
                 gen.add_li('t3', str(op2.value)) 
             gen.add_lw('t2', '0(t3)')
             
-            # Traducción de menor o igual qué
-            # Generando etiquetas
             trueLvl = gen.new_label()
             falseLvl = gen.new_label()
-            # Agregando condición
             gen.add_operation('sub','t2','t1','t0')
             gen.add_blez('t2', trueLvl)
-            # Agregando salto
             gen.add_jump(falseLvl)
-            # Result
             result = Value("", False, ExpressionType.BOOLEAN, [], [], [],result)
             result.truelvl.append(trueLvl)
             result.falselvl.append(falseLvl)
@@ -304,7 +277,6 @@ class Operation(Expression):
             result = int(op1.valor) ==  int(op2.valor)
 
             gen.add_br()
-            gen.comment('Realizando operacion igual que')
             if 't' in str(op1.value):
                 gen.add_move('t3', str(op1.value))
             else:
@@ -315,30 +287,22 @@ class Operation(Expression):
             else:
                 gen.add_li('t3', str(op2.value)) 
             gen.add_lw('t2', '0(t3)')
-            
-            # Traducción de igual qué
-            # Generando etiquetas
             trueLvl = gen.new_label()
             falseLvl = gen.new_label()
-            # Agregando condición
             gen.add_beq('t1', 't2', trueLvl)
-            # Agregando salto
             gen.add_jump(falseLvl)
-            # Result
             result = Value("", False, ExpressionType.BOOLEAN, [], [], [],result)
             result.truelvl.append(trueLvl)
             result.falselvl.append(falseLvl)
             return result
         
         if self.operador == "!=":
-            # Ejecución de operandos
             op1 = self.opL.ejecutar(ast, env, gen)
             op2 = self.opR.ejecutar(ast, env, gen)
             
             result = int(op1.valor)!=int(op2.valor)
 
             gen.add_br()
-            gen.comment('Realizando operacion diferente que')
             if 't' in str(op1.value):
                 gen.add_move('t3', str(op1.value))
             else:
@@ -349,35 +313,23 @@ class Operation(Expression):
             else:
                 gen.add_li('t3', str(op2.value)) 
             gen.add_lw('t2', '0(t3)')
-            
-            # Traducción de diferente
-            # Generando etiquetas
             trueLvl = gen.new_label()
             falseLvl = gen.new_label()
-            # Agregando condición
             gen.add_bne('t1', 't2', trueLvl)
-            # Agregando salto
             gen.add_jump(falseLvl)
-            # Result
             result = Value("", False, ExpressionType.BOOLEAN, [], [], [],result)
             result.truelvl.append(trueLvl)
             result.falselvl.append(falseLvl)
             return result
     
         if self.operador == "&&":
-            # Ejecución de operandos
             gen.add_br()
-            gen.comment('Realizando operacion and')
-            # Ejecución de primer operando
             op1 = self.opL.ejecutar(ast, env, gen)
-            # Se agregan las etiquetas verdaderas
             for lvl in op1.truelvl:
                 gen.new_body_label(lvl)
-            # Ejecución de segundo operando
             op2 = self.opR.ejecutar(ast, env, gen)
             
             result = int(op1.valor) and int(op2.valor)
-            # Result
             result = Value("", False, ExpressionType.BOOLEAN, [], [], [],result)
 
             result.truelvl.extend(op2.truelvl)
@@ -387,21 +339,15 @@ class Operation(Expression):
             return result
         
         if self.operador == "||":
-            # Ejecución de operandos
             gen.add_br()
-            gen.comment('Realizando operacion or')
-            # Ejecución de primer operando
             op1 = self.opL.ejecutar(ast, env, gen)
-            # Se agregan las etiquetas falsas
             for lvl in op1.falselvl:
                 gen.new_body_label(lvl)
             for lvl in op1.truelvl:
                 gen.new_body_label(lvl)
-            # Ejecución de segundo operando
             op2 = self.opR.ejecutar(ast, env, gen)
             
             result = (op1.valor) or (op2.valor)
-            # Result
             result = Value("", False, ExpressionType.BOOLEAN, [], [], [],result)
 
             result.truelvl.extend(op1.truelvl)
@@ -411,7 +357,6 @@ class Operation(Expression):
             return result
         
         if self.operador == "!":
-             # Ejecución de operandos
             op1 = self.opL.ejecutar(ast, env, gen)
             
             result = not (op1.valor)
@@ -436,7 +381,6 @@ class Operation(Expression):
     
             return  Value(str(temp), True, ExpressionType.BOOLEAN, [], [], [],result)
         
-
-
-
+        err = Errores(self.line, self.col,"Semantico", 'No se puedden operar los valores')
+        list_erroes.append(err)
         return None

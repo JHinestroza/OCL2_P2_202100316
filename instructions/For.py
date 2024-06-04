@@ -27,8 +27,10 @@ class For(Instruction):
         # Instrucciones While
         FOR_env = Environment(env, "FOR")
         StatementExecuter(self.block, ast, FOR_env, gen)
-        StatementExecuter([self.suma], ast, FOR_env, gen)
-      
+
+        self.suma.ejecutar(ast,env,gen)
+
+
         
         gen.add_jump(newLabel)
         # Se agregan las etiquetas falsas

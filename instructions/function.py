@@ -10,4 +10,11 @@ class Function(Instruction):
         self.block = block
 
     def ejecutar(self, ast, env, gen):
-        return None
+        # Creación de datos de función
+        functionData = {
+            'params': self.params,
+            'type': self.type,
+            'block': self.block
+        }
+        # Guardar función
+        env.saveFunction(ast, self.id, functionData)

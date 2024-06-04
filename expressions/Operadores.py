@@ -3,6 +3,7 @@ from environment.types import ExpressionType
 from environment.symbol import Symbol
 from expressions.primitive import Primitive
 from expressions.operation import Operation
+from instructions.assignment import Assignment
 
 dominant_table = [
     [ExpressionType.INTEGER, ExpressionType.FLOAT,  ExpressionType.STRING, ExpressionType.NULL,    ExpressionType.NULL],
@@ -27,17 +28,5 @@ class Operadores(Expression):
         op1 = Primitive(self.line, self.col, sym.valor, ExpressionType.INTEGER)
         op2 = Primitive(self.line, self.col, 1, ExpressionType.INTEGER)
         result = Operation(self.line, self.col, "+", op1, op2)
-        # Obtener valor
-        result = result.ejecutar(ast, env, gen)
-        print(result.valor)
         
-        # Sustituyendo valor
-        if 't' in str(result.value):
-            gen.add_move('t0', str(result.value))
-        else:
-            gen.add_li('t0', str(result.value))
-        gen.add_lw('t1', '0(t0)')
-        gen.add_li('t3', str(sym.position))
-        gen.add_sw('t1', '0(t3)')
-        gen.comment('Fin asignacion')
-        return None
+        return Assignment(self.line, self.col,self.id, result)

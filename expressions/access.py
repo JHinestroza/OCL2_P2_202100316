@@ -11,9 +11,13 @@ class Access(Expression):
     def ejecutar(self, ast, env, gen):
         # Realizar busqueda en entorno
         sym = env.getVariable(ast, self.id)
-        print(sym.position)
+        print(sym.valor)
         if(sym.type != ExpressionType.NULL):
-            # Reconstrucción de Value
-            return Value(sym.position, False, sym.type, [], [], [],sym.valor)
+            if isinstance(sym,Value):
+                position = sym.value
+                return Value(position, False, sym.type, [], [], [],sym.valor)      
+            else:
+                return Value(sym.position, False, sym.type, [], [], [],sym.valor)
+ 
         return Value('', False, ExpressionType.NULL, [], [], [],"")
 

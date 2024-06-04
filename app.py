@@ -11,7 +11,10 @@ from parser.parser import ast
 import graphviz
 from expressions.Errores import list_erroes
 
+from parser.parser import simbolos
 
+
+env = Environment(None, 'GLOBAL')
 # Se crea una instancia de la aplicación Flask
 app = Flask(__name__,template_folder="./Templates")
 CORS(app)
@@ -28,7 +31,7 @@ def obtener_texto():
     data = request.get_json()
     texto = data['EntradaTexto']
     # Creación del entorno global
-    env = Environment(None, 'GLOBAL')
+    
     # Creación del AST
     
     # Creación del generador
@@ -43,9 +46,15 @@ def obtener_texto():
     # res = {"result": True,"console": gen.get_final_code(),"errors": ast.getErrors()}
     res = {"result": True,"console":gen.get_final_code(),"errors":  ast.getErrors() }
     
+    try:
+        tabla = generar_grafo_tabla()
+        print(tabla)
+    except:
+        pass
     generar_grafo_tablaErrores()
     list_erroes.clear()
     ast.ClearErrors()
+    simbolos.clear()
     return jsonify({'mensaje': res})
 
 
@@ -80,6 +89,60 @@ def generar_grafo_tablaErrores():
     graph = graphviz.Source(grafo)
     graph.render("tablaErrores", format="png",  directory= "./static/Reportes",cleanup=True)
     print("Imagen generada con éxito.")
+    
+    
+    
+    
+def generar_tabla_html_graphviz():
+    global simbolos
+    # Encabezado de la tabla
+    tabla_html = "<table border='1' cellspacing='0'>\n"
+    tabla_html += "<tr><td>ID</td><td>Tipo de símbolo</td><td>Tipo de dato</td><td>Línea</td><td>Columna</td></tr>\n"
+    contador = 0
+    valor = None
+    # Iterar sobre las filas y columnas para generar las celdas de la tabla
+    for dato in simbolos:
+        tabla_html += "<tr>\n"
+        try:
+            valor = env.getVariable(ast, dato)
+            cadena = str(valor.type)
+            cadena = cadena.replace("ExpressionType.", "")
+            tabla_html += f"<td> {dato} </td> <td> Variable  </td>  <td> {cadena} </td>  <td> {valor.line}</td> <td> {valor.col}</td>\n"  
+        except:
+            pass
+               
+
+        try:
+            valor = env.getVariable(ast, dato)
+            valor = env.getFunction(ast, dato)
+            cadena = str(valor['type'])
+            cadena = cadena.replace("ExpressionType.", "")
+            tabla_html += f"<td> {dato} </td> <td> Funcion  </td>  <td> {cadena} </td>  <td> {contador}</td> <td> {contador}</td>\n"
+        except:
+                pass
+        contador +=1
+        tabla_html += "</tr>\n"
+
+    # Cierre de la tabla
+    tabla_html += "</table>"
+    
+    return tabla_html
+
+def generar_grafo_tabla():
+    tabla_html = generar_tabla_html_graphviz()
+    grafo = "digraph G {\n"
+    grafo += "node [shape=plaintext]\n"
+    grafo += "nodo [label=<{}>]\n".format(tabla_html)
+    grafo += "}"
+    with open("grafo.dot", "w") as dot_file:
+        dot_file.write(grafo)
+
+    # Generar la imagen a partir del archivo DOT
+    graph = graphviz.Source(grafo)
+    graph.render("tabla de simbolos", format="png",  directory= "./static/Reportes",cleanup=True)
+    print("Imagen generada con éxito. 2")
+
+
     
 if __name__ == '__main__':
     archivo_a_borrar = "./parser/parsetab.py"

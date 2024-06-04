@@ -15,24 +15,24 @@ class Parseo(Instruction):
     def ejecutar(self, ast, env,gen):
         outText = ""
         outText = self.Exp.ejecutar(ast, env,gen).valor
-        print(outText)
         
             
-        if self.parseo == "toLowerCase" and self.Exp.ejecutar(ast, env).type == ExpressionType.STRING:
+        if self.parseo == "toLowerCase" and self.Exp.ejecutar(ast, env,gen).type == ExpressionType.STRING:
             outText = outText.lower()
-            #print(outText)
-            symbol = Primitive(self.line, self.col, outText.lower(), ExpressionType.STRING)
-                # print(symbol.value)
+            symbol = Primitive(self.line, self.col, str(outText), ExpressionType.STRING)
+            symbol = symbol.ejecutar(ast,env,gen)
             return symbol
 
-        if self.parseo == "toUpperCase" and self.Exp.ejecutar(ast, env).type == ExpressionType.STRING:
+        if self.parseo == "toUpperCase" and self.Exp.ejecutar(ast, env,gen).type == ExpressionType.STRING:
             outText = outText.upper()
-            symbol = Primitive(self.line, self.col, outText.upper(), ExpressionType.STRING)
+            symbol = Primitive(self.line, self.col, str(outText), ExpressionType.STRING)
+            symbol = symbol.ejecutar(ast,env,gen)
             return symbol
         
         if self.parseo == "toString":
             outText = str(outText)
             symbol = Primitive(self.line, self.col, str(outText), ExpressionType.STRING)
+            symbol = symbol.ejecutar(ast,env,gen)
             return symbol
        
         ast.setErrors('Error: El tipo de dato '+ self.Exp.id +' no es String en la fila: '+ str(self.line))
